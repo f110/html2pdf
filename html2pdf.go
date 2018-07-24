@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -18,10 +19,11 @@ import (
 
 const (
 	MethodPagePrintToPDF = "Page.printToPDF"
+	RemoteDebuggingPort  = 9222
 )
 
 var (
-	RemoteDebuggingPort = 9222
+	FlagWithHeader = flag.Bool("with-header", false, "print header")
 )
 
 type RemoteDebuggingEndpoint struct {
@@ -55,6 +57,10 @@ func printToPDF(targetFile, outputFile string) error {
 	switch runtime.GOOS {
 	case "darwin":
 		if cmdPath, err := exec.LookPath("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"); err == nil {
+			chromeHeadlessCmd = cmdPath
+		}
+	case "linux":
+		if cmdPath, err := exec.LookPath("google-chrome"); err == nil {
 			chromeHeadlessCmd = cmdPath
 		}
 	}
@@ -104,7 +110,7 @@ func printToPDF(targetFile, outputFile string) error {
 		Id:     1,
 		Method: MethodPagePrintToPDF,
 		Params: &PagePrintToPDFParams{
-			DisplayHeaderFooter: false,
+			DisplayHeaderFooter: *FlagWithHeader,
 		},
 	}
 	if err := devToolsConn.WriteJSON(r); err != nil {
@@ -128,13 +134,16 @@ func printToPDF(targetFile, outputFile string) error {
 }
 
 func main() {
-	if len(os.Args) < 3 {
+	flag.Parse()
+	args := flag.Args()
+
+	if len(args) < 2 {
 		fmt.Fprintln(os.Stderr, "Usage: html2pdf [file] [outputfile]")
 		os.Exit(1)
 	}
 
-	targetFile := os.Args[1]
-	outputFile := os.Args[2]
+	targetFile := args[0]
+	outputFile := args[1]
 	if err := printToPDF(targetFile, outputFile); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
