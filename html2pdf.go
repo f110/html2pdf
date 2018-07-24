@@ -18,7 +18,6 @@ import (
 
 const (
 	MethodPagePrintToPDF = "Page.printToPDF"
-	ReadBufferSize       = 20000
 )
 
 var (
